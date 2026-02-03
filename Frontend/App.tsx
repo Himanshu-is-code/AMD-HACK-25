@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
 import { ChatSession, Message, Role, Theme } from './types';
-import { sendToAgent } from './services/agentService';
+import { sendToAgent, exchangeAuthCode } from './services/agentService';
 import { PanelLeft } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -18,6 +18,26 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
+    // Check for auth code param
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      // Clear params to look clean
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Exchange code
+      exchangeAuthCode(code)
+        .then(() => {
+          localStorage.setItem('isGoogleConnected', 'true');
+          window.dispatchEvent(new Event('google-auth-changed'));
+          // alert("Connected to Google successfully!"); // Removing alert for smoother UX, or keeping it but the event is key
+        })
+        .catch(err => {
+          console.error("Auth failed", err);
+          alert("Failed to connect to Google: " + err.message);
+        });
+    }
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 

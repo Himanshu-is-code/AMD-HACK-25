@@ -1,4 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { handleGoogleLogin } from '../utils/auth';
+import { getAuthStatus, logoutGoogle, getGoogleUser, getSettings, updateSetting } from '../services/agentService';
 import { Paperclip, PanelLeft, Bot, ListTodo, Settings, UserCircle, Plus, Search, LayoutGrid, Clock, MinusCircle, Calendar, HardDrive, Mail, StickyNote, TrendingUp, Move, Lock, EyeOff, GripVertical } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -63,6 +65,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     // Widget State
     const [widgets, setWidgets] = useState<WidgetInstance[]>([]);
     const [isWidgetMenuOpen, setIsWidgetMenuOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [widgetMode, setWidgetMode] = useState<WidgetMode>('free');
 
     // Floating Input State
@@ -74,6 +77,42 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     const inputDragStartRef = useRef({ x: 0, y: 0 });
     const inputResizeStartRef = useRef({ x: 0, width: 0 });
     const [isResuming, setIsResuming] = useState(false);
+    // Initialize from LocalStorage for instant UI
+    const [isGoogleConnected, setIsGoogleConnected] = useState(() => {
+        return localStorage.getItem('isGoogleConnected') === 'true';
+    });
+    const [googleUser, setGoogleUser] = useState<{ name: string, picture: string, email: string } | null>(() => {
+        const saved = localStorage.getItem('googleUser');
+        return saved ? JSON.parse(saved) : null;
+    });
+    const [isCalendarSyncEnabled, setIsCalendarSyncEnabled] = useState(true);
+
+    // Initial Auth & Settings Check
+    useEffect(() => {
+        const checkAuth = async () => {
+            // verified status from backend
+            const authStatus = await getAuthStatus();
+            setIsGoogleConnected(authStatus.connected);
+            localStorage.setItem('isGoogleConnected', String(authStatus.connected));
+
+            if (authStatus.connected) {
+                const user = await getGoogleUser();
+                setGoogleUser(user);
+                if (user) localStorage.setItem('googleUser', JSON.stringify(user));
+            } else {
+                setGoogleUser(null);
+                localStorage.removeItem('googleUser');
+            }
+
+            const settings = await getSettings();
+            setIsCalendarSyncEnabled(settings.calendar_sync_enabled);
+        };
+
+        checkAuth();
+
+        window.addEventListener('google-auth-changed', checkAuth);
+        return () => window.removeEventListener('google-auth-changed', checkAuth);
+    }, []);
 
     const isEmpty = messages.length === 0;
     const isExpanded = isFocused || inputValue.trim().length > 0;
@@ -413,16 +452,100 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
                 <div className="flex items-center gap-2">
 
-                    <button className="p-2 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                        <Settings className="w-4 h-4" />
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors">
-                        <UserCircle className="w-5 h-5" />
-                        <span className="text-xs font-medium">Sign In</span>
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                            className={`p-2 rounded-md transition-colors ${isSettingsOpen ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400'}`}
+                        >
+                            <Settings className="w-4 h-4" />
+                        </button>
+
+                        {isSettingsOpen && (
+                            <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                                <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-500 px-2 py-1 mb-1 uppercase tracking-wider">Settings</div>
+
+                                {googleUser && (
+                                    <div className="flex items-center justify-between p-2 rounded-md bg-zinc-50 dark:bg-zinc-800/50 mb-2 border border-zinc-100 dark:border-zinc-800">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <img src={googleUser.picture} alt="Profile" className="w-6 h-6 rounded-full flex-shrink-0" />
+                                            <div className="col flex flex-col min-w-0">
+                                                <span className="text-xs font-medium truncate">{googleUser.name}</span>
+                                                <span className="text-[10px] text-zinc-500 truncate">{googleUser.email}</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                await logoutGoogle();
+                                                setIsGoogleConnected(false);
+                                                setGoogleUser(null);
+                                                setIsSettingsOpen(false);
+                                            }}
+                                            className="ml-2 text-xs text-red-500 hover:underline flex-shrink-0"
+                                        >
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800">
+                                            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Calendar Sync</span>
+                                            <span className="text-[10px] text-zinc-500">Allow agent access</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Toggle Switch */}
+                                    <button
+                                        onClick={async () => {
+                                            if (!googleUser) {
+                                                handleGoogleLogin();
+                                                setIsSettingsOpen(false);
+                                                return;
+                                            }
+
+                                            const newState = !isCalendarSyncEnabled;
+                                            setIsCalendarSyncEnabled(newState);
+                                            await updateSetting('calendar_sync_enabled', newState);
+                                        }}
+                                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${googleUser && isCalendarSyncEnabled ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
+                                    >
+                                        <span className="sr-only">Toggle Calendar Sync</span>
+                                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${googleUser && isCalendarSyncEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {googleUser ? (
+                        <div className="flex items-center gap-2 pl-1 pr-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700">
+                            <img src={googleUser.picture} alt="Profile" className="w-6 h-6 rounded-full" />
+                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 max-w-[100px] truncate">{googleUser.name}</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleGoogleLogin}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+                        >
+                            <UserCircle className="w-5 h-5" />
+                            <span className="text-xs font-medium">Sign In</span>
+                        </button>
+                    )}
                 </div>
 
-                {isWidgetMenuOpen && <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsWidgetMenuOpen(false)} />}
+                {/* Overlay for menus */}
+                {(isWidgetMenuOpen || isSettingsOpen) && (
+                    <div
+                        className="fixed inset-0 z-40 bg-transparent"
+                        onClick={() => {
+                            setIsWidgetMenuOpen(false);
+                            setIsSettingsOpen(false);
+                        }}
+                    />
+                )}
             </div>
 
             <div className="flex-1 flex flex-col relative min-h-0 z-0 pointer-events-none">

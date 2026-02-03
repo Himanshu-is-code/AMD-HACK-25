@@ -84,3 +84,6 @@ This agent uses **Pattern-Matching Model Routing**:
 *   **Smart Model (`qwen3:4b`)**: Handles complex tasks like planning, workflows, analysis, or long requests.
 
 The routing logic is handled securely in `agent-backend/main.py`.
+
+<!-- Start Backend: Run uvicorn main:app --reload.
+Start Frontend: Run npm run dev. -->

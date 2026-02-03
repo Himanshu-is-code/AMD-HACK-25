@@ -14,3 +14,7 @@ Thumbs.db
 # Logs and Data
 tasks.json
 *.log
+
+# Credentials
+token.json
+client_secret.json

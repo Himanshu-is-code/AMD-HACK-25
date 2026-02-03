@@ -10,7 +10,10 @@ export async function sendToAgent(text: string) {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ text }),
+            body: JSON.stringify({
+                text,
+                client_time: new Date().toString() // "Wed Feb 04 2026 02:30:00 GMT+0530..."
+            }),
             signal: controller.signal
         });
 
@@ -58,6 +61,84 @@ export async function completeTask(taskId: string, planUpdate: string, sources: 
     } catch (error) {
         console.error("Error completing task:", error);
         return null;
+    }
+}
+
+// Auth Types
+export interface AuthResponse {
+    token: string;
+    refresh_token: string;
+    expiry?: string;
+}
+
+export async function exchangeAuthCode(code: string): Promise<AuthResponse> {
+    try {
+        const res = await fetch(`${AGENT_URL}/auth/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Auth failed");
+        }
+        return res.json();
+    } catch (error) {
+        console.error("Auth Error:", error);
+        throw error;
+    }
+}
+
+export async function getAuthStatus(): Promise<{ connected: boolean }> {
+    try {
+        const res = await fetch(`${AGENT_URL}/auth/status`);
+        if (!res.ok) return { connected: false };
+        return res.json();
+    } catch (e) {
+        return { connected: false };
+    }
+}
+
+export async function getGoogleUser(): Promise<{ name: string, picture: string, email: string } | null> {
+    try {
+        const res = await fetch(`${AGENT_URL}/auth/user`);
+        if (!res.ok) return null;
+        return res.json();
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function logoutGoogle() {
+    try {
+        await fetch(`${AGENT_URL}/auth/logout`, { method: "POST" });
+        localStorage.removeItem('isGoogleConnected');
+        localStorage.removeItem('googleUser');
+    } catch (e) {
+        console.error("Logout failed", e);
+    }
+}
+
+export async function getSettings(): Promise<{ calendar_sync_enabled: boolean }> {
+    try {
+        const res = await fetch(`${AGENT_URL}/settings`);
+        if (!res.ok) return { calendar_sync_enabled: true };
+        return res.json();
+    } catch (e) {
+        return { calendar_sync_enabled: true };
+    }
+}
+
+export async function updateSetting(key: string, value: boolean) {
+    try {
+        await fetch(`${AGENT_URL}/settings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key, value })
+        });
+    } catch (e) {
+        console.error("Failed to update setting", e);
     }
 }
 

@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Plus, 
-  MoreHorizontal, 
-  Trash2, 
-  Edit2, 
-  Sun, 
+import {
+  Plus,
+  MoreHorizontal,
+  Trash2,
+  Edit2,
+  Sun,
   Moon,
   X,
   Check,
   Search,
-  PanelLeft
+  PanelLeft,
+  Calendar,
+  LogOut
 } from 'lucide-react';
+import { handleGoogleLogin } from '../utils/auth';
 import { ChatSession, SidebarProps } from '../types';
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -68,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Filter chats based on search term
-  const filteredChats = chats.filter(chat => 
+  const filteredChats = chats.filter(chat =>
     chat.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -78,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="w-64 flex-shrink-0 h-full bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-colors duration-200 z-30 relative">
       {/* Header - Minimal, only theme toggle */}
       <div className="p-4 flex items-center justify-end h-14">
-        <button 
+        <button
           onClick={toggleTheme}
           className="p-2 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 transition-colors"
           title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -98,24 +101,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
+      {/* Google Connect Button */}
+      <div className="px-4 mb-3">
+        <button
+          onClick={handleGoogleLogin}
+          className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium text-blue-700 dark:text-blue-300 shadow-sm"
+        >
+          <Calendar className="w-4 h-4" />
+          Connect Google
+        </button>
+      </div>
+
       {/* Search Bar */}
       <div className="px-4 pb-4">
         <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
-            <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-zinc-200/50 dark:bg-zinc-800/50 border border-transparent focus:bg-white dark:focus:bg-zinc-950 border-zinc-200 dark:border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 transition-all text-zinc-900 dark:text-zinc-100 placeholder-zinc-500"
-            />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-zinc-200/50 dark:bg-zinc-800/50 border border-transparent focus:bg-white dark:focus:bg-zinc-950 border-zinc-200 dark:border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 transition-all text-zinc-900 dark:text-zinc-100 placeholder-zinc-500"
+          />
         </div>
       </div>
 
       {/* Workspaces Header */}
       <div className="px-4 pt-2 pb-2 flex items-center gap-2 text-zinc-500 dark:text-zinc-500">
-          <span className="text-xs font-semibold tracking-wider">WORKSPACES</span>
-          <PanelLeft className="w-3.5 h-3.5" />
+        <span className="text-xs font-semibold tracking-wider">WORKSPACES</span>
+        <PanelLeft className="w-3.5 h-3.5" />
       </div>
 
       {/* Chat List */}
@@ -125,15 +139,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : filteredChats.length === 0 ? (
           <div className="text-center text-xs text-zinc-400 mt-4">No results found</div>
         ) : null}
-        
+
         {filteredChats.map((chat) => (
-          <div 
+          <div
             key={chat.id}
-            className={`group relative flex items-center rounded-lg px-3 py-2 text-sm transition-colors cursor-pointer ${
-              currentChatId === chat.id 
-                ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' 
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
-            }`}
+            className={`group relative flex items-center rounded-lg px-3 py-2 text-sm transition-colors cursor-pointer ${currentChatId === chat.id
+              ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
+              }`}
             onClick={() => onSelectChat(chat.id)}
           >
             {renamingId === chat.id ? (
@@ -157,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ) : (
               <>
                 <span className="truncate flex-1">{chat.title}</span>
-                
+
                 {/* Options Menu Trigger */}
                 <button
                   onClick={(e) => {
@@ -171,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Dropdown Menu */}
                 {menuOpenId === chat.id && (
-                  <div 
+                  <div
                     ref={menuRef}
                     className="absolute right-2 top-8 z-20 w-32 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg py-1"
                     onClick={(e) => e.stopPropagation()}
@@ -200,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ))}
       </div>
-      
+
     </div>
   );
 };
