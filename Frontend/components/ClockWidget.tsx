@@ -4,10 +4,12 @@ import { Settings, X, RotateCcw } from 'lucide-react';
 interface ClockWidgetProps {
   id?: string;
   onRemove?: () => void; // Provided by Wrapper usually, but we can call it if passed
+  isLocked?: boolean;
 }
 
 export const ClockWidget: React.FC<ClockWidgetProps> = ({
   id,
+  isLocked
 }) => {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -52,7 +54,7 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
   return (
     <div className="w-full h-full relative group">
       {/* Settings Panel Popover */}
-      {showSettings && (
+      {showSettings && !isLocked && (
         <div
           className="absolute top-0 left-[105%] z-[60] w-64 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-4 cursor-default animate-in fade-in slide-in-from-left-2 duration-200"
           onMouseDown={(e) => e.stopPropagation()}
@@ -77,8 +79,8 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
                     key={font}
                     onClick={() => setCustomStyles(prev => ({ ...prev, fontFamily: font }))}
                     className={`flex-1 py-1.5 text-sm border rounded-md transition-all ${customStyles.fontFamily === font
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                        : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
                       } ${font}`}
                   >
                     Aa
@@ -187,15 +189,17 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
         </div>
 
         {/* Hover Controls */}
-        <div className={`absolute top-3 right-3 z-20 transition-opacity duration-200 ${showSettings ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-          <button
-            onMouseDown={(e) => e.stopPropagation()} // Prevent drag start from wrapper
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 rounded-full backdrop-blur-sm text-zinc-700 dark:text-zinc-200 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        {!isLocked && (
+          <div className={`absolute top-3 right-3 z-20 transition-opacity duration-200 ${showSettings ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <button
+              onMouseDown={(e) => e.stopPropagation()} // Prevent drag start from wrapper
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 rounded-full backdrop-blur-sm text-zinc-700 dark:text-zinc-200 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

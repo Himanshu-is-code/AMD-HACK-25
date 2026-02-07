@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { handleGoogleLogin } from '../utils/auth';
-import { getAuthStatus, logoutGoogle, getGoogleUser, getSettings, updateSetting } from '../services/agentService';
-import { Paperclip, PanelLeft, Bot, ListTodo, Settings, UserCircle, Plus, Search, LayoutGrid, Clock, MinusCircle, Calendar, HardDrive, Mail, StickyNote, TrendingUp, Move, Lock, EyeOff, GripVertical } from 'lucide-react';
+import { getAuthStatus, logoutGoogle, getGoogleUser } from '../services/agentService';
+import { Paperclip, PanelLeft, Bot, ListTodo, Settings, UserCircle, Plus, Search, LayoutGrid, Clock, MinusCircle, Calendar, HardDrive, Mail, StickyNote, TrendingUp, Move, Lock, Unlock, Eye, EyeOff, GripVertical } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, Role } from '../types';
@@ -34,7 +34,7 @@ interface WidgetInstance {
     h: number; // Percentage 0-100
 }
 
-type WidgetMode = 'free' | 'fixed' | 'hidden';
+
 
 const Timer = () => {
     const [seconds, setSeconds] = useState(0);
@@ -66,7 +66,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     const [widgets, setWidgets] = useState<WidgetInstance[]>([]);
     const [isWidgetMenuOpen, setIsWidgetMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [widgetMode, setWidgetMode] = useState<WidgetMode>('free');
+
+    const [isWidgetsLocked, setIsWidgetsLocked] = useState(false);
+    const [areWidgetsVisible, setAreWidgetsVisible] = useState(true);
 
     // Floating Input State
     const [inputPos, setInputPos] = useState<{ x: number | null, y: number | null }>({ x: null, y: null });
@@ -85,7 +87,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         const saved = localStorage.getItem('googleUser');
         return saved ? JSON.parse(saved) : null;
     });
-    const [isCalendarSyncEnabled, setIsCalendarSyncEnabled] = useState(true);
+
 
     // Initial Auth & Settings Check
     useEffect(() => {
@@ -104,8 +106,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 localStorage.removeItem('googleUser');
             }
 
-            const settings = await getSettings();
-            setIsCalendarSyncEnabled(settings.calendar_sync_enabled);
+
         };
 
         checkAuth();
@@ -201,7 +202,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         };
         setWidgets(prev => [...prev, newWidget]);
         setIsWidgetMenuOpen(false);
-        if (widgetMode === 'hidden') setWidgetMode('free');
+        setWidgets(prev => [...prev, newWidget]);
+        setIsWidgetMenuOpen(false);
+        if (!areWidgetsVisible) setAreWidgetsVisible(true);
     };
 
     const removeWidget = (id: string) => {
@@ -323,7 +326,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             onDrop={handleDrop}
         >
             {/* Active Widgets */}
-            {widgetMode !== 'hidden' && (
+            {areWidgetsVisible && (
                 <div className={`absolute inset-0 z-0 transition-all duration-700 ease-in-out ${!isEmpty ? 'blur-md opacity-40 pointer-events-none' : ''}`}>
                     {widgets.map(widget => (
                         <DraggableWidgetWrapper
@@ -333,17 +336,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                             size={{ width: widget.w, height: widget.h }}
                             onUpdate={updateWidget}
                             onRemove={() => removeWidget(widget.id)}
-                            isLocked={widgetMode === 'fixed'}
+                            isLocked={isWidgetsLocked}
                             canvasRef={chatContainerRef}
                         >
-                            {widget.type === 'clock' && <ClockWidget id={widget.id} />}
-                            {widget.type === 'calendar-small' && <CalendarWidget id={widget.id} variant="small" />}
-                            {widget.type === 'calendar-large' && <CalendarWidget id={widget.id} variant="large" />}
-                            {widget.type === 'calendar-wide' && <CalendarWidget id={widget.id} variant="wide" />}
-                            {widget.type === 'drive' && <DriveWidget id={widget.id} />}
-                            {widget.type === 'email' && <EmailWidget id={widget.id} />}
-                            {widget.type === 'notes' && <NotesWidget id={widget.id} />}
-                            {widget.type === 'stock' && <StockWidget id={widget.id} />}
+                            {widget.type === 'clock' && <ClockWidget id={widget.id} isLocked={isWidgetsLocked} />}
+                            {widget.type === 'calendar-small' && <CalendarWidget id={widget.id} variant="small" isLocked={isWidgetsLocked} />}
+                            {widget.type === 'calendar-large' && <CalendarWidget id={widget.id} variant="large" isLocked={isWidgetsLocked} />}
+                            {widget.type === 'calendar-wide' && <CalendarWidget id={widget.id} variant="wide" isLocked={isWidgetsLocked} />}
+                            {widget.type === 'drive' && <DriveWidget id={widget.id} isLocked={isWidgetsLocked} />}
+                            {widget.type === 'email' && <EmailWidget id={widget.id} isLocked={isWidgetsLocked} />}
+                            {widget.type === 'notes' && <NotesWidget id={widget.id} isLocked={isWidgetsLocked} />}
+                            {widget.type === 'stock' && <StockWidget id={widget.id} isLocked={isWidgetsLocked} />}
                         </DraggableWidgetWrapper>
                     ))}
                 </div>
@@ -432,20 +435,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                             )}
                         </div>
 
-                        {/* 3-Way Mode Toggle */}
-                        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 border border-zinc-200 dark:border-zinc-700">
-                            {(['free', 'fixed', 'hidden'] as const).map((mode) => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setWidgetMode(mode)}
-                                    className={`p-1.5 rounded-md transition-all ${widgetMode === mode ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
-                                    title={`${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`}
-                                >
-                                    {mode === 'free' && <Move className="w-3.5 h-3.5" />}
-                                    {mode === 'fixed' && <Lock className="w-3.5 h-3.5" />}
-                                    {mode === 'hidden' && <EyeOff className="w-3.5 h-3.5" />}
-                                </button>
-                            ))}
+                        {/* Widget Controls */}
+                        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 border border-zinc-200 dark:border-zinc-700">
+                            <button
+                                onClick={() => setIsWidgetsLocked(!isWidgetsLocked)}
+                                className={`p-1.5 rounded-md transition-all ${isWidgetsLocked ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+                                title={isWidgetsLocked ? "Unlock Widgets" : "Lock Widgets"}
+                            >
+                                {isWidgetsLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                                onClick={() => setAreWidgetsVisible(!areWidgetsVisible)}
+                                className={`p-1.5 rounded-md transition-all ${!areWidgetsVisible ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+                                title={areWidgetsVisible ? "Hide Widgets" : "Show Widgets"}
+                            >
+                                {areWidgetsVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -487,36 +492,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                                     </div>
                                 )}
 
-                                <div className="flex items-center justify-between p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800">
-                                            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Calendar Sync</span>
-                                            <span className="text-[10px] text-zinc-500">Allow agent access</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Toggle Switch */}
+                                {!googleUser && (
                                     <button
-                                        onClick={async () => {
-                                            if (!googleUser) {
-                                                handleGoogleLogin();
-                                                setIsSettingsOpen(false);
-                                                return;
-                                            }
-
-                                            const newState = !isCalendarSyncEnabled;
-                                            setIsCalendarSyncEnabled(newState);
-                                            await updateSetting('calendar_sync_enabled', newState);
-                                        }}
-                                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${googleUser && isCalendarSyncEnabled ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
+                                        onClick={handleGoogleLogin}
+                                        className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium text-blue-700 dark:text-blue-300 shadow-sm"
                                     >
-                                        <span className="sr-only">Toggle Calendar Sync</span>
-                                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${googleUser && isCalendarSyncEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                                        <Calendar className="w-4 h-4" />
+                                        Connect Google
                                     </button>
-                                </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -654,7 +638,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     className={`absolute z-20 pointer-events-auto group/input ${isInputDragging || isInputResizing ? '' : 'transition-all duration-500 ease-in-out'}`}
                     style={!isEmpty ? { left: '50%', transform: 'translateX(-50%)', bottom: '32px', width: '100%', maxWidth: '42rem', padding: '0 1rem' } : { left: inputPos.x !== null ? `${inputPos.x}px` : '50%', top: inputPos.y !== null ? `${inputPos.y}px` : 'auto', width: `${inputWidth}px`, maxWidth: '90vw', visibility: inputPos.x === null ? 'hidden' : 'visible' }}
                 >
-                    {widgetMode === 'free' && isEmpty && (
+                    {areWidgetsVisible && !isWidgetsLocked && isEmpty && (
                         <>
                             <div className="absolute left-0 top-0 bottom-0 w-6 -ml-8 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover/input:opacity-100 transition-opacity text-zinc-400" onMouseDown={(e) => { e.preventDefault(); setIsInputDragging(true); setHasUserMovedInput(true); inputDragStartRef.current = { x: e.clientX, y: e.clientY }; }}>
                                 <GripVertical className="w-5 h-5" />

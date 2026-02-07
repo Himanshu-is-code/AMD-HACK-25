@@ -284,7 +284,7 @@ def execute_task_logic(task_id: str, task_text: str, client_time: str = None, re
         
         # --- REAL ACTION EXECUTION ---
         result_update = ""
-        triggers = ["calendar", "calender", "schedule", "meeting", "appointment", "event", "remind", "mark"]
+        triggers = ["calendar", "calender", "meeting", "appointment", "event", "remind", "mark"]
         if any(valid_trigger in task_text.lower() for valid_trigger in triggers):
             logging.info(f"Executing Calendar Action for task {task_id}")
             

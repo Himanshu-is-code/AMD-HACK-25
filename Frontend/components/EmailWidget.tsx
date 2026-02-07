@@ -4,11 +4,13 @@ import { Settings, X, RotateCcw, Pencil, Archive, Pin } from 'lucide-react';
 interface EmailWidgetProps {
   id?: string;
   onRemove?: () => void;
+  isLocked?: boolean;
 }
 
 export const EmailWidget: React.FC<EmailWidgetProps> = ({
   id,
-  onRemove
+  onRemove,
+  isLocked
 }) => {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -22,7 +24,7 @@ export const EmailWidget: React.FC<EmailWidgetProps> = ({
   return (
     <div className="w-full h-full relative group">
       {/* Settings Panel */}
-      {showSettings && (
+      {showSettings && !isLocked && (
         <div
           className="absolute top-0 left-[105%] z-[60] w-64 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-4 cursor-default animate-in fade-in slide-in-from-left-2 duration-200"
           onMouseDown={(e) => e.stopPropagation()}
@@ -43,8 +45,8 @@ export const EmailWidget: React.FC<EmailWidgetProps> = ({
                     key={font}
                     onClick={() => setCustomStyles(prev => ({ ...prev, fontFamily: font }))}
                     className={`flex-1 py-1.5 text-sm border rounded-md transition-all ${customStyles.fontFamily === font
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                        : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
                       } ${font}`}
                   >
                     Aa
@@ -126,8 +128,8 @@ export const EmailWidget: React.FC<EmailWidgetProps> = ({
               </div>
               <div className="flex flex-col items-end justify-center">
                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${customStyles.textColor
-                    ? 'border-current/20'
-                    : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 dark:text-zinc-400'
+                  ? 'border-current/20'
+                  : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 dark:text-zinc-400'
                   }`}>
                   <Archive className="w-4 h-4" />
                 </div>
@@ -152,8 +154,8 @@ export const EmailWidget: React.FC<EmailWidgetProps> = ({
               </div>
               <div className="flex flex-col items-end justify-center">
                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${customStyles.textColor
-                    ? 'border-current/20'
-                    : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 dark:text-zinc-400'
+                  ? 'border-current/20'
+                  : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 dark:text-zinc-400'
                   }`}>
                   <Archive className="w-4 h-4" />
                 </div>
@@ -163,15 +165,17 @@ export const EmailWidget: React.FC<EmailWidgetProps> = ({
         </div>
 
         {/* Controls */}
-        <div className={`absolute top-3 right-3 z-20 transition-opacity duration-200 ${showSettings ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 rounded-full backdrop-blur-sm text-zinc-600 dark:text-white/70 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        {!isLocked && (
+          <div className={`absolute top-3 right-3 z-20 transition-opacity duration-200 ${showSettings ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 rounded-full backdrop-blur-sm text-zinc-600 dark:text-white/70 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

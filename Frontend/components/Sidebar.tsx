@@ -101,16 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Google Connect Button */}
-      <div className="px-4 mb-3">
-        <button
-          onClick={handleGoogleLogin}
-          className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium text-blue-700 dark:text-blue-300 shadow-sm"
-        >
-          <Calendar className="w-4 h-4" />
-          Connect Google
-        </button>
-      </div>
+
 
       {/* Search Bar */}
       <div className="px-4 pb-4">
